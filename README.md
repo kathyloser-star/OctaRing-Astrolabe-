@@ -1,2 +1,2 @@
-# OctaRing-Astrolabe-
+OctaRing Astrolabe™ 
 divination wheel
