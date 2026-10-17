@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mystical Astrolabe</title>
+<style>
+  :root {
+    --bg: #0B0D1B;
+    --panel: #0f1226;
+    --panel2: #141a33;
+    --gold: #ffd766;
+    --gold-dim: rgba(212, 175, 55, 0.55);
+    --text: #f4f1ff;
+    --muted: rgba(244, 241, 255, 0.65);
+    --violet: #b48cff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: Georgia, "Times New Roman", serif; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+
+  header { text-align: center; padding: 10px 16px 6px; }
+  header h1 { margin: 0; font-size: 28px; letter-spacing: 1px; color: var(--gold); text-shadow: 0 0 14px rgba(255, 215, 102, 0.45); }
+  header .sub { font-size: 15px; color: var(--text); opacity: 0.9; margin-top: 2px; }
+  header .tag { font-size: 11px; letter-spacing: 3px; color: var(--violet); margin-top: 4px; font-family: Helvetica, Arial, sans-serif; font-weight: 600; }
+
+  .topbar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 10px 16px; background: linear-gradient(90deg, #120a24, #0c1230); border-top: 1px solid rgba(255, 215, 102, 0.18); border-bottom: 1px solid rgba(255, 215, 102, 0.18); }
+  .stat .k { font-family: Helvetica, Arial, sans-serif; font-size: 10px; letter-spacing: 1.5px; color: rgba(255, 215, 102, 0.8); font-weight: 700; }
+  .stat .v { font-size: 15px; font-weight: 600; color: #fff; }
+  .spacer { flex: 1; }
+  button, .btn {
+    font-family: Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; color: #fff;
+    background: linear-gradient(180deg, #2a1f55, #171236); border: 1px solid rgba(255, 215, 102, 0.45);
+    border-radius: 8px; padding: 7px 12px; cursor: pointer; transition: all .15s ease;
+  }
+  button:hover { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 215, 102, 0.3); }
+  button:active { transform: translateY(1px); }
+  button.on { background: linear-gradient(180deg, #7a5a12, #4a3608); border-color: var(--gold); box-shadow: 0 0 12px rgba(255, 215, 102, 0.45); }
+  button.small { padding: 3px 9px; font-size: 14px; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  #stage {
+    position: relative; flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 50% 50%, #241048 0%, #0f1733 45%, #0B0D1B 100%);
+    overflow: hidden;
+  }
+  #stage::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.8;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 70% 15%, #fff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 85% 70%, #ffe9a8 50%, transparent 51%),
+      radial-gradient(1px 1px at 40% 80%, #cdbcff 50%, transparent 51%),
+      radial-gradient(1px 1px at 10% 90%, #fff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 60% 50%, #fff 50%, transparent 51%);
+    background-size: 340px 340px; background-repeat: repeat;
+  }
+  #wheel { width: 100%; height: 100%; max-width: 100%; max-height: 100%; cursor: grab; touch-action: none; position: relative; }
+  #wheel:active { cursor: grabbing; }
+
+  .wedge { stroke: rgba(212, 175, 55, 0.55); stroke-width: 0.8; opacity: 0.85; transition: opacity .2s; }
+  .wedge.active { stroke: #fff; stroke-width: 2; opacity: 1; }
+  .glyph { fill: var(--gold); font-family: "Segoe UI Symbol", "Noto Sans Symbols", "DejaVu Sans", Georgia, serif; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .glyph.active { fill: #fff; }
+  .glyph.rune { filter: drop-shadow(0 0 3px rgba(255, 215, 102, 0.9)) drop-shadow(0 0 6px rgba(255, 190, 60, 0.6)); }
+  .season-label { fill: #0B0D1B; font-family: Helvetica, Arial, sans-serif; font-weight: 800; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .core-title { fill: var(--gold); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; font-family: Georgia, serif; }
+
+  .gate {
+    position: absolute; width: 84px; text-align: center; font-family: Helvetica, Arial, sans-serif; pointer-events: none;
+  }
+  .gate .disc {
+    width: 72px; height: 72px; margin: 0 auto; border-radius: 50%; border: 1.5px solid var(--gold);
+    display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--gold);
+    box-shadow: 0 0 16px rgba(255, 215, 102, 0.25), inset 0 0 14px rgba(0, 0, 0, 0.7);
+    font-family: "Segoe UI Symbol", "Noto Sans Symbols", "DejaVu Sans", serif;
+  }
+  .gate .lbl { font-size: 11px; font-weight: 700; color: var(--gold); margin-top: 4px; letter-spacing: .5px; }
+  .gate.nw { left: 14px; top: 14px; } .gate.ne { right: 14px; top: 14px; }
+  .gate.se { right: 14px; bottom: 14px; } .gate.sw { left: 14px; bottom: 14px; }
+
+  aside {
+    width: 300px; flex: none; background: linear-gradient(180deg, #0d1028, #090b1d); border-left: 1px solid rgba(255, 215, 102, 0.2);
+    padding: 16px; overflow-y: auto;
+  }
+  aside h2 { margin: 0 0 10px; font-size: 20px; color: var(--gold); font-weight: 600; }
+  select {
+    width: 100%; font-family: Helvetica, Arial, sans-serif; font-size: 13px; padding: 7px 8px; border-radius: 8px;
+    background: #171b38; color: #fff; border: 1px solid rgba(255, 215, 102, 0.4);
+  }
+  .insp-head { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+  .insp-glyph { font-size: 40px; color: #fff; min-width: 56px; text-align: center; font-family: "Segoe UI Symbol", "Noto Sans Symbols", "DejaVu Sans", serif; }
+  .insp-title { font-size: 18px; font-weight: 700; }
+  .elem { font-family: Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; }
+  .muted { color: var(--muted); font-size: 12px; font-family: Helvetica, Arial, sans-serif; margin-top: 6px; }
+  .meaning { font-size: 14px; line-height: 1.45; margin-top: 10px; color: rgba(244, 241, 255, 0.92); }
+  .row2 { display: flex; gap: 8px; margin-top: 12px; }
+  .row2 button { flex: 1; }
+  hr { border: none; border-top: 1px solid rgba(255, 215, 102, 0.18); margin: 14px 0; }
+  .breakdown h3 { font-size: 13px; letter-spacing: 1px; margin: 0 0 8px; color: rgba(255, 215, 102, 0.85); font-family: Helvetica, Arial, sans-serif; }
+  .brow { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 215, 102, 0.1); cursor: pointer; }
+  .brow.sel { border-color: var(--gold); background: rgba(255, 215, 102, 0.08); }
+  .brow .bn { flex: 1; min-width: 0; }
+  .brow .bn .n { font-size: 11px; color: var(--muted); font-family: Helvetica, Arial, sans-serif; }
+  .brow .bn .t { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brow .st { font-size: 10px; font-family: Helvetica, Arial, sans-serif; color: var(--muted); }
+  .season-box { margin-top: 12px; padding: 10px; border-radius: 10px; border: 1px solid rgba(255, 215, 102, 0.3); background: rgba(255, 255, 255, 0.03); }
+  .season-box .sn { font-weight: 700; font-size: 15px; }
+
+  .reading { background: linear-gradient(0deg, #0c0f22, #0a0c1c); border-top: 1px solid rgba(255, 215, 102, 0.25); padding: 10px 16px 12px; }
+  .reading h2 { margin: 0 0 8px; font-size: 18px; color: var(--gold); font-weight: 600; }
+  .cards { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .card {
+    flex: 0 0 210px; border-radius: 12px; padding: 10px; border: 1px solid rgba(255, 215, 102, 0.45);
+    background: linear-gradient(160deg, rgba(40, 24, 84, 0.7), rgba(12, 16, 40, 0.9));
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.5), 0 0 12px rgba(120, 80, 255, 0.12);
+  }
+  .card .cn { font-family: Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .8px; color: var(--gold); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .cr { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+  .card .cg { font-size: 26px; min-width: 36px; text-align: center; font-family: "Segoe UI Symbol", "Noto Sans Symbols", "DejaVu Sans", serif; }
+  .card .ct { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .ce { font-family: Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; }
+  .card .cm { font-size: 12px; line-height: 1.35; color: rgba(244, 241, 255, 0.85); margin-top: 6px; height: 50px; overflow: hidden; }
+  .card .cb { display: flex; gap: 6px; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Mystical Astrolabe</h1>
+  <div class="sub">Celestial Divination &amp; Correspondence Wheel</div>
+  <div class="tag">SPIN RINGS &bull; ALIGN ENERGIES &bull; REVEAL CORRESPONDENCES</div>
+</header>
+
+<div class="topbar">
+  <div class="stat"><div class="k">ACTIVE CORRESPONDENCES</div><div class="v"><span id="alignedCount">0</span> of 7 aligned</div></div>
+  <div class="stat"><div class="k">DOMINANT ELEMENT</div><div class="v" id="dominant">Spirit</div></div>
+  <div class="stat"><div class="k">MOON PHASE</div><div class="v" id="moon">New Moon</div></div>
+  <div class="spacer"></div>
+  <button id="spinAll">Spin All</button>
+  <button id="drift" class="toggle">Cosmic Drift</button>
+  <button id="sound" class="toggle">Sound</button>
+  <button id="haptics" class="toggle on">Haptics</button>
+  <button id="reset">Reset Alignment</button>
+</div>
+
+<main>
+  <div id="stage">
+    <svg id="wheel" viewBox="-500 -500 1000 1000" xmlns="http://www.w3.org/2000/svg" aria-label="Astrolabe wheel"></svg>
+    <div class="gate nw"><div class="disc">&#x1F703;</div><div class="lbl">North &middot; Earth</div></div>
+    <div class="gate ne"><div class="disc">&#x1F701;</div><div class="lbl">East &middot; Air</div></div>
+    <div class="gate se"><div class="disc">&#x1F702;</div><div class="lbl">South &middot; Fire</div></div>
+    <div class="gate sw"><div class="disc">&#x1F704;</div><div class="lbl">West &middot; Water</div></div>
+  </div>
+
+  <aside>
+    <h2>Symbol Inspector</h2>
+    <select id="sel"></select>
+    <div class="insp-head">
+      <div class="insp-glyph" id="iGlyph"></div>
+      <div>
+        <div class="insp-title" id="iTitle"></div>
+        <div class="elem" id="iElem"></div>
+      </div>
+    </div>
+    <div class="muted" id="iPos"></div>
+    <div class="muted" id="iStatus"></div>
+    <div class="meaning" id="iMeaning"></div>
+    <div class="row2">
+      <button id="spinLeft">&#x2039; Spin Left</button>
+      <button id="spinRight">Spin Right &#x203A;</button>
+    </div>
+    <div class="muted">Drag any ring in the wheel to spin only that ring. Release and it carries on with momentum, then lands on a symbol.</div>
+    <div class="season-box" id="seasonBox" style="display:none"></div>
+    <hr>
+    <div class="breakdown">
+      <h3>RING BREAKDOWN</h3>
+      <div id="rows"></div>
+    </div>
+  </aside>
+</main>
+
+<section class="reading">
+  <h2>Live Alignment Reading</h2>
+  <div class="cards" id="cards"></div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Data (mirrors AstrolabeModel.swift) ----------
+  const WHEEL_NAMES = ["Core Responses", "Alphabet", "Elder Futhark", "Months", "Astrology & Planets", "Major & Minor Arcana", "Numbers & Chakras"];
+
+  const DATA = [
+    [ // 0 Core Responses
+      ["Hello","Hello","Spirit","Greeting and welcome. A door opens to connection."],
+      ["Goodbye","Goodbye","Spirit","Closure and release. A chapter ends gracefully."],
+      ["Yes","Yes","Fire","Affirmation. The path is open, so proceed with confidence."],
+      ["No","No","Water","Refusal or boundary. The answer is closed for now."],
+      ["Maybe","Maybe","Air","Uncertainty. The threads are not yet woven, so observe."],
+      ["Wait","Wait","Earth","Patience. The timing is not ripe, so let energy gather."],
+      ["Stop","Stop","Earth","Halt. Pause all motion and reassess the course."]
+    ],
+    [ // 1 Alphabet
+      ["A","Letter A","Fire","Beginnings and the first spark of an idea"],
+      ["B","Letter B","Earth","Shelter, foundation, and steady building"],
+      ["C","Letter C","Air","Communication and the open vessel"],
+      ["D","Letter D","Water","Doorways, feeling, and passage between states"],
+      ["E","Letter E","Fire","Expansion, energy, and expression"],
+      ["F","Letter F","Earth","Abundance, sustenance, and the harvest"],
+      ["G","Letter G","Air","Gifts, giving, and exchange"],
+      ["H","Letter H","Water","Hearth, sanctuary, and the home within"],
+      ["I","Letter I","Fire","Self, identity, and the single spark"],
+      ["J","Letter J","Earth","Justice, joining, and fair judgment"],
+      ["K","Letter K","Air","Kindling, will, and the sovereign path"],
+      ["L","Letter L","Water","Lunar intuition and the flowing path"],
+      ["M","Letter M","Fire","Mother waters, nurture, and the source of life"],
+      ["N","Letter N","Earth","Need, necessity, and the bridge"],
+      ["O","Letter O","Air","Openness, origin, and the unbroken circle"],
+      ["P","Letter P","Water","Pivot, cornerstone, and the gate"],
+      ["Q","Letter Q","Fire","Quest, questions, and the sought truth"],
+      ["R","Letter R","Earth","Road, journey, and rhythm"],
+      ["S","Letter S","Air","Serpent, transformation, and the spiral"],
+      ["T","Letter T","Water","Truth, the world tree, and steady ground"],
+      ["U","Letter U","Fire","Raw strength and primal power"],
+      ["V","Letter V","Earth","Victory, vision, and the crossing"],
+      ["W","Letter W","Air","Wellspring, joy, and the well of wisdom"],
+      ["X","Letter X","Water","The meeting of worlds and a hard choice"],
+      ["Y","Letter Y","Fire","The fork in the road and a decision point"],
+      ["Z","Letter Z","Earth","Lightning, sudden insight, and awakening"]
+    ],
+    [ // 2 Elder Futhark
+      ["\u16A0","Fehu","Earth","Wealth, abundance, and the flow of resources"],
+      ["\u16A2","Uruz","Fire","Raw vigor, strength, and untamed health"],
+      ["\u16A6","Thurisaz","Fire","A gate, a catalyst, and a force that provokes change"],
+      ["\u16A8","Ansuz","Air","Message, divine breath, and wisdom spoken"],
+      ["\u16B1","Raidho","Air","Journey, right action, and rhythm of travel"],
+      ["\u16B2","Kenaz","Fire","Torch, knowledge, and creative illumination"],
+      ["\u16B7","Gebo","Air","Gift, partnership, and balanced exchange"],
+      ["\u16B9","Wunjo","Water","Joy, harmony, and fellowship"],
+      ["\u16BA","Hagalaz","Air","Hail, disruption, and sudden change from outside"],
+      ["\u16BE","Nauthiz","Fire","Need, constraint, and resourcefulness under pressure"],
+      ["\u16C1","Isa","Water","Ice, stillness, and a necessary pause"],
+      ["\u16C3","Jera","Earth","Harvest, cycles, and the reward of patience"],
+      ["\u16C7","Eihwaz","Earth","Endurance, the yew tree, and the axis of life"],
+      ["\u16C8","Perthro","Water","Mystery, fate, and hidden things revealed"],
+      ["\u16C9","Algiz","Spirit","Protection, sanctuary, and higher connection"],
+      ["\u16CA","Sowilo","Fire","Sun, success, and vital life force"],
+      ["\u16CF","Tiwaz","Air","Justice, honor, and principled sacrifice"],
+      ["\u16D2","Berkano","Earth","Birth, growth, and gentle renewal"],
+      ["\u16D6","Ehwaz","Earth","Partnership, trust, and forward movement"],
+      ["\u16D7","Mannaz","Air","Humanity, the self, and community"],
+      ["\u16DA","Laguz","Water","Water, intuition, and the flow of the unconscious"],
+      ["\u16DC","Ingwaz","Water","Seed, potential, and completion of a cycle"],
+      ["\u16DE","Dagaz","Fire","Dawn, breakthrough, and clarity arriving"],
+      ["\u16DF","Othala","Earth","Heritage, home, and inherited wisdom"]
+    ],
+    [ // 3 Months
+      ["JAN","January","Earth","Winter. Frost, reflection, and quiet resolve"],
+      ["FEB","February","Water","Winter. Purification, renewal, and inner light"],
+      ["MAR","March","Fire","Spring. Awakening, first growth, and bold starts"],
+      ["APR","April","Earth","Spring. Rebirth, growth, and renewed senses"],
+      ["MAY","May","Earth","Spring. Blossoming, abundance, and steady building"],
+      ["JUN","June","Air","Summer. Solstice light, union, and open communication"],
+      ["JUL","July","Water","Summer. Full summer, nurture, and the heart of home"],
+      ["AUG","August","Fire","Summer. Harvest light, courage, and full effort"],
+      ["SEP","September","Earth","Autumn. Harvest, discernment, and balance"],
+      ["OCT","October","Air","Autumn. The turning, reflection, and release"],
+      ["NOV","November","Water","Autumn. Descent, deep introspection, and letting go"],
+      ["DEC","December","Fire","Winter. The longest night, rebirth of light, and celebration"]
+    ],
+    [ // 4 Astrology & Planets
+      ["\u2648","Aries","Fire","Courage, initiative, and new beginnings"],
+      ["\u2649","Taurus","Earth","Stability, sensuality, and lasting value"],
+      ["\u264A","Gemini","Air","Curiosity, communication, and duality"],
+      ["\u264B","Cancer","Water","Nurture, memory, and the sense of home"],
+      ["\u264C","Leo","Fire","Creativity, pride, and the heart expressed"],
+      ["\u264D","Virgo","Earth","Analysis, service, and refinement"],
+      ["\u264E","Libra","Air","Balance, partnership, and harmony"],
+      ["\u264F","Scorpio","Water","Depth, transformation, and intensity"],
+      ["\u2650","Sagittarius","Fire","Adventure, truth-seeking, and freedom"],
+      ["\u2651","Capricorn","Earth","Structure, ambition, and discipline"],
+      ["\u2652","Aquarius","Air","Innovation, community, and detachment"],
+      ["\u2653","Pisces","Water","Compassion, dreams, and dissolving boundaries"],
+      ["\u2609","Sun","Fire","Vitality, identity, and life purpose"],
+      ["\u263D","Moon","Water","Emotion, intuition, and cycles"],
+      ["\u263F","Mercury","Air","Mind, speech, and travel"],
+      ["\u2640","Venus","Earth","Love, beauty, and what we value"],
+      ["\u2642","Mars","Fire","Drive, conflict, and decisive action"],
+      ["\u2643","Jupiter","Fire","Expansion, good fortune, and wisdom"],
+      ["\u2644","Saturn","Earth","Limits, time, and mastery earned through effort"]
+    ],
+    [ // 5 Major & Minor Arcana
+      ["0","The Fool","Air","A leap of faith and a new journey"],
+      ["I","The Magician","Air","Will, skill, and manifestation"],
+      ["II","The High Priestess","Water","Intuition and hidden knowledge"],
+      ["III","The Empress","Earth","Abundance, nurture, and creative fertility"],
+      ["IV","The Emperor","Fire","Structure, authority, and stability"],
+      ["V","The Hierophant","Earth","Tradition, teaching, and shared faith"],
+      ["VI","The Lovers","Air","Union, choice, and aligned values"],
+      ["VII","The Chariot","Water","Willpower and victory through discipline"],
+      ["VIII","Strength","Fire","Courage, compassion, and inner strength"],
+      ["IX","The Hermit","Earth","Solitude and inner guidance"],
+      ["X","Wheel of Fortune","Fire","Cycles, turning points, and fate"],
+      ["XI","Justice","Air","Truth, cause and effect, and balance"],
+      ["XII","The Hanged Man","Water","Surrender and a new perspective"],
+      ["XIII","Death","Water","Ending, transformation, and release"],
+      ["XIV","Temperance","Fire","Moderation, blending, and patience"],
+      ["XV","The Devil","Earth","Attachment, bondage, and the shadow"],
+      ["XVI","The Tower","Fire","Sudden upheaval and revelation"],
+      ["XVII","The Star","Air","Hope, healing, and renewal"],
+      ["XVIII","The Moon","Water","Illusion, dreams, and the unconscious"],
+      ["XIX","The Sun","Fire","Joy, success, and clarity"],
+      ["XX","Judgement","Water","Awakening, calling, and reckoning"],
+      ["XXI","The World","Earth","Completion, wholeness, and achievement"],
+      ["\u2665","Cups","Water","Emotions, relationships, and creativity"],
+      ["\u2663","Wands","Fire","Passion, ambition, and action"],
+      ["\u2660","Swords","Air","Thought, conflict, and truth"],
+      ["\u2666","Pentacles","Earth","Work, the body, and material resources"]
+    ],
+    [ // 6 Numbers & Chakras
+      ["0","Zero","Spirit","The void, pure potential, and the unmanifest"],
+      ["1","One","Fire","Unity, the origin point, and a new start"],
+      ["2","Two","Water","Duality, choice, and polarity"],
+      ["3","Three","Air","Creation, synthesis, and growth"],
+      ["4","Four","Earth","Foundation, order, and the square"],
+      ["5","Five","Air","Change, humanity, and the pentagram"],
+      ["6","Six","Water","Harmony, balance, and union"],
+      ["7","Seven","Spirit","Mystery, the seeker, and inner wisdom"],
+      ["8","Eight","Fire","Abundance, infinity, and personal power"],
+      ["9","Nine","Earth","Completion, wisdom, and culmination"]
+    ]
+  ];
+
+  const SEASONS = [
+    { name: "Spring", months: "March, April, May", element: "Air", energy: "Renewal, sprouting growth, and bold new starts",
+      reading: "Spring is the season of awakening. Seeds you planted are breaking the soil, so move with the new growth rather than force it.", tint: "#73d973" },
+    { name: "Summer", months: "June, July, August", element: "Fire", energy: "Radiance, abundance, and full expression",
+      reading: "Summer lights the wheel at its fullest. Warmth, visibility, and courage are high, so let your work be seen.", tint: "#fa9e26" },
+    { name: "Autumn", months: "September, October, November", element: "Earth", energy: "Harvest, discernment, and release",
+      reading: "Autumn gathers what has ripened and lets the rest fall away. Sort, reap, and release what is finished.", tint: "#b85224" },
+    { name: "Winter", months: "December, January, February", element: "Water", energy: "Stillness, introspection, and inner light",
+      reading: "Winter draws energy inward. Rest, plan, and tend the hidden flame, because the return of light is already forming.", tint: "#73a6f2" }
+  ];
+  const SEASON_FIRST_MONTH = [2, 5, 8, 11];
+
+  const PALETTE = ["#1f3b94", "#0f6b4f", "#8c1f40", "#5c2887", "#c98a1c", "#117a7a", "#6e1523"];
+  const SPECTRUM = ["#d9191a", "#f27314", "#fad826", "#1ab34d", "#1a73e6", "#4d26b3", "#9933d9"];
+  const EL_COLORS = { Fire: "#ff6a33", Water: "#40bff2", Air: "#e6e6ff", Earth: "#59d973", Spirit: "#bf8cff" };
+  const MOON_NAMES = ["New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous", "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"];
+
+  // ---------- Geometry (mirrors AstrolabeGeometry) ----------
+  const R = 480, OUTER = 0.80, HUB = 0.20, BAND = 0.10, TRACK_SHARE = 0.28;
+  const NS = "http://www.w3.org/2000/svg";
+
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  const f = n => n.toFixed(2);
+  function P(r, deg) { const a = deg * Math.PI / 180; return [r * Math.cos(a), r * Math.sin(a)]; }
+  function annular(ro, ri, a0, a1) {
+    const [x0, y0] = P(ro, a0), [x1, y1] = P(ro, a1), [x2, y2] = P(ri, a1), [x3, y3] = P(ri, a0);
+    const large = (a1 - a0) > 180 ? 1 : 0;
+    return `M${f(x0)} ${f(y0)} A${f(ro)} ${f(ro)} 0 ${large} 1 ${f(x1)} ${f(y1)} L${f(x2)} ${f(y2)} A${f(ri)} ${f(ri)} 0 ${large} 0 ${f(x3)} ${f(y3)} Z`;
+  }
+  function pie(r, a0, a1) {
+    const [x0, y0] = P(r, a0), [x1, y1] = P(r, a1);
+    const large = (a1 - a0) > 180 ? 1 : 0;
+    return `M0 0 L${f(x0)} ${f(y0)} A${f(r)} ${f(r)} 0 ${large} 1 ${f(x1)} ${f(y1)} Z`;
+  }
+  function wheelAt(d) {
+    const frac = d / R;
+    if (frac <= HUB) return 0;
+    if (frac > OUTER) return null;
+    const layer = Math.floor((OUTER - frac) / BAND);
+    return Math.min(Math.max(layer, 0), 5) + 1;
+  }
+  function wrap(v) { let x = v % 360; if (x > 180) x -= 360; if (x < -180) x += 360; return x; }
+
+  // ---------- State ----------
+  const N = 7;
+  const st = {
+    rot: Array(N).fill(0), vel: Array(N).fill(0), last: Array(N).fill(-1),
+    drag: null, lastAng: 0, lastT: null,
+    drift: false, sound: false, haptics: true, sel: 1
+  };
+  const groups = [], wedges = [], labels = [];
+  let coreTitle = null;
+
+  // ---------- Build SVG ----------
+  const svg = document.getElementById("wheel");
+  const defs = el("defs", {}, svg);
+  const lg = el("linearGradient", { id: "gold", x1: "0", y1: "0", x2: "1", y2: "1" }, defs);
+  [["0", "#8a6a1f"], ["0.3", "#ffe08a"], ["0.55", "#b8860b"], ["0.8", "#fff3c4"], ["1", "#9c7420"]]
+    .forEach(([o, c]) => el("stop", { offset: o, "stop-color": c }, lg));
+  const rg = el("radialGradient", { id: "hubfill", cx: "0", cy: "0", r: "1" }, defs);
+  el("stop", { offset: "0", "stop-color": "#2a1657" }, rg);
+  el("stop", { offset: "1", "stop-color": "#070714" }, rg);
+  const glow = el("filter", { id: "glow", x: "-50%", y: "-50%", width: "200%", height: "200%" }, defs);
+  el("feGaussianBlur", { stdDeviation: "2.5", result: "b" }, glow);
+  const merge = el("feMerge", {}, glow);
+  el("feMergeNode", { in: "b" }, merge); el("feMergeNode", { in: "SourceGraphic" }, merge);
+
+  // Backdrop hexagram and rim
+  const outerR = OUTER * R;
+  const hex = [];
+  for (const start of [-90, 90]) {
+    for (let i = 0; i < 3; i++) {
+      const [x, y] = P(outerR, start + i * 120);
+      hex.push(i === 0 ? `M${f(x)} ${f(y)}` : `L${f(x)} ${f(y)}`);
+    }
+    hex.push("Z");
+  }
+  el("path", { d: hex.join(" "), fill: "none", stroke: "rgba(255,215,102,0.22)", "stroke-width": 1.2 }, svg);
+  el("circle", { cx: 0, cy: 0, r: outerR + 9, fill: "none", stroke: "url(#gold)", "stroke-width": 5 }, svg);
+  const spectrumRim = el("circle", { cx: 0, cy: 0, r: outerR + 14, fill: "none", stroke: "rgba(180,140,255,0.35)", "stroke-width": 1.5 }, svg);
+
+  function wedgeColor(w, k, n) {
+    if (w === 3) return SEASONS[seasonIndexForMonth(k)].tint;
+    if (w === 6) return SPECTRUM[Math.min(6, Math.floor(k / n * 7))];
+    return PALETTE[(k + w) % PALETTE.length];
+  }
+  function seasonIndexForMonth(m) {
+    if (m >= 2 && m <= 4) return 0;
+    if (m >= 5 && m <= 7) return 1;
+    if (m >= 8 && m <= 10) return 2;
+    return 3;
+  }
+
+  function buildWheel(w) {
+    const entries = DATA[w], n = entries.length, slot = 360 / n;
+    const fullOuter = (OUTER - (w - 1) * BAND) * R;
+    const fullInner = fullOuter - BAND * R;
+    const isM = w === 3;
+    const trackInner = isM ? fullOuter - (fullOuter - fullInner) * TRACK_SHARE : fullOuter;
+    const outer = isM ? trackInner : fullOuter, inner = fullInner;
+    const fs = Math.max(9, Math.min((outer - inner) * 0.42, 20));
+    const g = el("g", { class: "ring", "data-w": w }, svg);
+    groups[w] = g; wedges[w] = []; labels[w] = [];
+
+    for (let k = 0; k < n; k++) {
+      const mid = -90 + k * slot;
+      const p = el("path", { d: annular(outer, inner, mid - slot / 2, mid + slot / 2), class: "wedge", fill: wedgeColor(w, k, n) }, g);
+      wedges[w][k] = p;
+      const lr = (outer + inner) / 2, [x, y] = P(lr, mid);
+      const t = el("text", {
+        class: "glyph" + (w === 2 ? " rune" : ""), x: 0, y: 0,
+        "font-size": fs.toFixed(1), transform: `translate(${f(x)} ${f(y)}) rotate(${f(mid + 90)})`
+      }, g);
+      t.textContent = entries[k][0];
+      labels[w][k] = t;
+    }
+
+    if (isM) {
+      const tl = (fullOuter + trackInner) / 2;
+      SEASONS.forEach((s, si) => {
+        const start = -90 + (SEASON_FIRST_MONTH[si] - 0.5) * slot, end = start + 3 * slot;
+        el("path", { d: annular(fullOuter, trackInner, start, end), fill: s.tint, stroke: "#ffd766", "stroke-width": 1.2 }, g);
+        const mid = (start + end) / 2, [x, y] = P(tl, mid);
+        const t = el("text", { class: "season-label", x: 0, y: 0, "font-size": 8, transform: `translate(${f(x)} ${f(y)}) rotate(${f(mid + 90)})` }, g);
+        t.textContent = s.name.toUpperCase();
+      });
+    }
+
+    const circleRadii = isM ? [fullOuter, trackInner, inner] : [outer, inner];
+    circleRadii.forEach(r => el("circle", { cx: 0, cy: 0, r, fill: "none", stroke: "rgba(255,215,102,0.7)", "stroke-width": 1 }, g));
+  }
+
+  for (let w = 1; w <= 6; w++) buildWheel(w);
+
+  // Core (wheel 0)
+  {
+    const entries = DATA[0], n = entries.length, slot = 360 / n, cr = HUB * R;
+    const g = el("g", { class: "ring", "data-w": 0 }, svg);
+    groups[0] = g; wedges[0] = []; labels[0] = [];
+    for (let k = 0; k < n; k++) {
+      const mid = -90 + k * slot;
+      const p = el("path", { d: pie(cr, mid - slot / 2, mid + slot / 2), class: "wedge", fill: PALETTE[k % PALETTE.length] }, g);
+      wedges[0][k] = p;
+      const [x, y] = P(cr * 0.64, mid);
+      const t = el("text", { class: "glyph", x: 0, y: 0, "font-size": Math.max(8, cr * 0.16).toFixed(1), transform: `translate(${f(x)} ${f(y)}) rotate(${f(mid + 90)})` }, g);
+      t.textContent = entries[k][0];
+      labels[0][k] = t;
+    }
+    const disc = cr * 0.34;
+    el("circle", { cx: 0, cy: 0, r: disc, fill: "rgba(0,0,0,0.8)", stroke: "#ffd766", "stroke-width": 1.5 }, svg);
+    coreTitle = el("text", { class: "core-title", x: 0, y: 0, "font-size": Math.max(9, disc * 0.42).toFixed(1) }, svg);
+    el("circle", { cx: 0, cy: 0, r: cr, fill: "none", stroke: "rgba(255,215,102,0.9)", "stroke-width": 1.5 }, svg);
+  }
+
+  // Pointers (drawn last so they sit on top)
+  {
+    const radii = [HUB * R];
+    for (let w = 1; w <= 6; w++) radii.push((OUTER - (w - 1) * BAND) * R);
+    radii.forEach(r => {
+      const tipY = -r - 1;
+      el("path", { d: `M0 ${f(tipY)} L-6 ${f(tipY - 10)} L6 ${f(tipY - 10)} Z`, fill: "#ffe14d", stroke: "#8a6a1f", "stroke-width": 0.6 }, svg);
+    });
+  }
+
+  // ---------- Logic (mirrors AstrolabeModel) ----------
+  function landedIndex(w) {
+    const n = DATA[w].length, slot = 360 / n;
+    let i = Math.round(-st.rot[w] / slot) % n;
+    if (i < 0) i += n;
+    return i;
+  }
+  function isAligned(w) {
+    const n = DATA[w].length, slot = 360 / n;
+    const target = -landedIndex(w) * slot;
+    return st.vel[w] === 0 && Math.abs(wrap(target - st.rot[w])) < 0.5;
+  }
+  function driftSpeed(w) { return (w % 2 === 0 ? 1 : -1) * (6 + w * 2); }
+
+  function step() {
+    const dt = 1 / 60;
+    for (let w = 0; w < N; w++) {
+      if (w === st.drag) continue;
+      const slot = 360 / DATA[w].length;
+      if (st.drift) {
+        st.vel[w] += (driftSpeed(w) - st.vel[w]) * 0.03;
+      } else {
+        st.vel[w] *= 0.982;
+        if (Math.abs(st.vel[w]) < 4) st.vel[w] = 0;
+      }
+      st.rot[w] += st.vel[w] * dt;
+      if (!st.drift && st.vel[w] === 0) {
+        const target = -landedIndex(w) * slot;
+        st.rot[w] += wrap(target - st.rot[w]) * 0.2;
+      }
+      st.rot[w] = ((st.rot[w] % 360) + 360) % 360;
+    }
+    checkLandings();
+  }
+
+  function checkLandings() {
+    let changed = false;
+    for (let w = 0; w < N; w++) {
+      const idx = landedIndex(w);
+      if (idx !== st.last[w]) {
+        if (st.last[w] >= 0) {
+          wedges[w][st.last[w]].classList.remove("active");
+          labels[w][st.last[w]].classList.remove("active");
+        }
+        wedges[w][idx].classList.add("active");
+        labels[w][idx].classList.add("active");
+        st.last[w] = idx;
+        changed = true;
+      }
+    }
+    if (changed) feedback();
+  }
+
+  let audioCtx = null;
+  function feedback() {
+    if (st.haptics && navigator.vibrate) navigator.vibrate(12);
+    if (st.sound) {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine"; o.frequency.value = 1800;
+        g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.09);
+      } catch (e) { /* audio unavailable */ }
+    }
+  }
+
+  function nudge(w, dir) {
+    const slot = 360 / DATA[w].length;
+    st.vel[w] = dir * slot * 1.2;
+    st.sel = w;
+  }
+  function spinAll() {
+    for (let w = 0; w < N; w++) st.vel[w] = (w % 2 === 0 ? 1 : -1) * (140 + w * 12);
+  }
+  function reset() {
+    st.rot.fill(0); st.vel.fill(0); st.last.fill(-1);
+    st.drift = false; syncToggles();
+    for (let w = 0; w < N; w++) { wedges[w].forEach(p => p.classList.remove("active")); labels[w].forEach(t => t.classList.remove("active")); }
+    checkLandings();
+  }
+
+  // ---------- Drag ----------
+  function toLocal(e) {
+    const rect = svg.getBoundingClientRect();
+    const scale = Math.min(rect.width, rect.height) / 1000;
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    return { x: (e.clientX - cx) / scale, y: (e.clientY - cy) / scale };
+  }
+  svg.addEventListener("pointerdown", e => {
+    const p = toLocal(e);
+    const w = wheelAt(Math.hypot(p.x, p.y));
+    if (w === null) return;
+    st.drag = w; st.lastAng = Math.atan2(p.y, p.x) * 180 / Math.PI; st.lastT = null;
+    st.vel[w] = 0; st.sel = w;
+    svg.setPointerCapture(e.pointerId);
+    syncSelect();
+  });
+  svg.addEventListener("pointermove", e => {
+    if (st.drag === null) return;
+    const p = toLocal(e);
+    const a = Math.atan2(p.y, p.x) * 180 / Math.PI;
+    let d = a - st.lastAng;
+    if (d > 180) d -= 360; if (d < -180) d += 360;
+    st.lastAng = a;
+    const t = performance.now();
+    const prev = st.lastT ?? (t - 1000 / 60);
+    const dt = Math.max(1 / 120, (t - prev) / 1000);
+    st.lastT = t;
+    const w = st.drag;
+    st.rot[w] += d;
+    const inst = d / dt;
+    st.vel[w] = Math.max(-1200, Math.min(1200, st.vel[w] * 0.5 + inst * 0.5));
+  });
+  function endDrag() {
+    if (st.drag !== null) {
+      if (st.lastT !== null && performance.now() - st.lastT > 80) st.vel[st.drag] = 0;
+      st.drag = null;
+    }
+  }
+  window.addEventListener("pointerup", endDrag);
+  window.addEventListener("pointercancel", endDrag);
+
+  // ---------- Controls ----------
+  function toggleBtn(id, key) {
+    const b = document.getElementById(id);
+    b.addEventListener("click", () => { st[key] = !st[key]; syncToggles(); if (key === "sound" && st.sound) feedback(); });
+  }
+  function syncToggles() {
+    document.getElementById("drift").classList.toggle("on", st.drift);
+    document.getElementById("sound").classList.toggle("on", st.sound);
+    document.getElementById("haptics").classList.toggle("on", st.haptics);
+  }
+  toggleBtn("drift", "drift"); toggleBtn("sound", "sound"); toggleBtn("haptics", "haptics");
+  document.getElementById("spinAll").addEventListener("click", spinAll);
+  document.getElementById("reset").addEventListener("click", reset);
+  document.getElementById("spinLeft").addEventListener("click", () => nudge(st.sel, -1));
+  document.getElementById("spinRight").addEventListener("click", () => nudge(st.sel, 1));
+
+  const sel = document.getElementById("sel");
+  WHEEL_NAMES.forEach((name, i) => {
+    const o = document.createElement("option"); o.value = i; o.textContent = name; sel.appendChild(o);
+  });
+  sel.addEventListener("change", () => { st.sel = parseInt(sel.value, 10); });
+  function syncSelect() { sel.value = String(st.sel); }
+
+  // Reading cards
+  const cardsEl = document.getElementById("cards");
+  const cardRefs = [];
+  for (let w = 0; w < N; w++) {
+    const c = document.createElement("div");
+    c.className = "card";
+    c.style.background = `linear-gradient(160deg, ${hexA(PALETTE[w], 0.35)}, rgba(12,16,40,0.92))`;
+    c.innerHTML = `<div class="cn"></div><div class="cr"><div class="cg"></div><div><div class="ct"></div><div class="ce"></div></div></div><div class="cm"></div><div class="cb"><button class="small" data-d="-1">&#x2039;</button><button class="small" data-d="1">&#x203A;</button></div>`;
+    c.querySelectorAll("button").forEach(b => b.addEventListener("click", () => nudge(w, parseInt(b.dataset.d, 10))));
+    cardsEl.appendChild(c);
+    cardRefs[w] = { name: c.querySelector(".cn"), glyph: c.querySelector(".cg"), title: c.querySelector(".ct"), elem: c.querySelector(".ce"), meaning: c.querySelector(".cm") };
+  }
+  function hexA(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+  }
+
+  // Breakdown rows
+  const rowsEl = document.getElementById("rows");
+  const rowRefs = [];
+  for (let w = 0; w < N; w++) {
+    const r = document.createElement("div");
+    r.className = "brow";
+    r.innerHTML = `<div class="bn"><div class="n"></div><div class="t"></div></div><div class="st"></div><button class="small" data-d="-1">&#x2039;</button><button class="small" data-d="1">&#x203A;</button>`;
+    r.addEventListener("click", e => { if (e.target.tagName === "BUTTON") return; st.sel = w; syncSelect(); });
+    r.querySelectorAll("button").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); nudge(w, parseInt(b.dataset.d, 10)); }));
+    rowsEl.appendChild(r);
+    rowRefs[w] = { row: r, name: r.querySelector(".n"), title: r.querySelector(".t"), status: r.querySelector(".st") };
+  }
+
+  // ---------- Text updates (only write on change) ----------
+  const cache = new Map();
+  function setText(node, val) {
+    if (cache.get(node) !== val) { node.textContent = val; cache.set(node, val); }
+  }
+  function setStyle(node, prop, val) {
+    const key = prop + "|" + node.dataset.uid;
+    if (!node.dataset.uid) node.dataset.uid = Math.random().toString(36).slice(2);
+    const k2 = prop + "|" + node.dataset.uid;
+    if (cache.get(k2) !== val) { node.style[prop] = val; cache.set(k2, val); }
+  }
+  function moonName() {
+    const syn = 29.530588853, ref = 947182440000;
+    let phase = ((Date.now() - ref) / 86400000) % syn;
+    if (phase < 0) phase += syn;
+    return MOON_NAMES[Math.round(phase / syn * 8) % 8];
+  }
+  function statusOf(w) { return isAligned(w) ? "Aligned" : "In motion"; }
+
+  function updateUI() {
+    // Rotation for each ring group
+    for (let w = 0; w < N; w++) groups[w].setAttribute("transform", `rotate(${st.rot[w].toFixed(3)})`);
+    if (coreTitle) setText(coreTitle, DATA[0][landedIndex(0)][1]);
+
+    // Top bar
+    let aligned = 0;
+    const counts = {};
+    for (let w = 0; w < N; w++) {
+      if (isAligned(w)) aligned++;
+      const el_ = DATA[w][landedIndex(w)][2];
+      counts[el_] = (counts[el_] || 0) + 1;
+    }
+    let dom = "Spirit", best = -1;
+    for (const k in counts) if (counts[k] > best) { best = counts[k]; dom = k; }
+    setText(document.getElementById("alignedCount"), String(aligned));
+    setText(document.getElementById("dominant"), dom);
+    setText(document.getElementById("moon"), moonName());
+
+    // Reading cards and breakdown
+    for (let w = 0; w < N; w++) {
+      const e = DATA[w][landedIndex(w)];
+      const ref = cardRefs[w];
+      setText(ref.name, WHEEL_NAMES[w]);
+      setText(ref.glyph, e[0]);
+      setText(ref.title, e[1]);
+      setText(ref.elem, e[2]);
+      ref.elem.style.color = EL_COLORS[e[2]] || "#bf8cff";
+      setText(ref.meaning, e[3]);
+
+      const rr = rowRefs[w];
+      setText(rr.name, WHEEL_NAMES[w]);
+      setText(rr.title, e[0] + "  " + e[1]);
+      setText(rr.status, statusOf(w));
+      rr.row.classList.toggle("sel", st.sel === w);
+    }
+
+    // Inspector
+    const w = st.sel, e = DATA[w][landedIndex(w)];
+    setText(document.getElementById("iGlyph"), e[0]);
+    setText(document.getElementById("iTitle"), e[1]);
+    const iElem = document.getElementById("iElem");
+    setText(iElem, "Elemental affinity: " + e[2]);
+    iElem.style.color = EL_COLORS[e[2]] || "#bf8cff";
+    setText(document.getElementById("iPos"), "Position " + (landedIndex(w) + 1) + " of " + DATA[w].length + " on " + WHEEL_NAMES[w]);
+    setText(document.getElementById("iStatus"), statusOf(w));
+    setText(document.getElementById("iMeaning"), e[3]);
+
+    const sb = document.getElementById("seasonBox");
+    if (w === 3) {
+      const s = SEASONS[seasonIndexForMonth(landedIndex(3))];
+      sb.style.display = "block";
+      setText(sb, s.name + " \u2022 " + s.months + " \u2022 " + s.element + "\n" + s.energy + "\n" + s.reading);
+      sb.style.whiteSpace = "pre-line";
+      sb.dataset.lbl = "";
+    } else {
+      sb.style.display = "none";
+    }
+  }
+
+  // ---------- Loop ----------
+  let lastTs = performance.now(), acc = 0;
+  function frame(ts) {
+    const dt = Math.min(0.05, (ts - lastTs) / 1000); lastTs = ts; acc += dt;
+    while (acc >= 1 / 60) { step(); acc -= 1 / 60; }
+    updateUI();
+    requestAnimationFrame(frame);
+  }
+  syncToggles(); syncSelect();
+  checkLandings();
+  requestAnimationFrame(frame);
+  setInterval(() => { /* moon phase refresh handled in updateUI */ }, 60000);
+})();
+</script>
+</body>
+</html>
